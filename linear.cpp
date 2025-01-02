@@ -907,7 +907,7 @@ void Solver_MCSVM_CS::Solve(double *w)
 #define GETI(i) (y[i]+1)
 // To support weights for instances, use GETI(i) (i)
 
-static int solve_l2r_l1l2_svc(const problem *prob, const parameter *param, double *w, double Cp, double Cn, int max_iter=300)
+static int solve_l2r_l1l2_svc(const problem *prob, const parameter *param, double *w, double Cp, double Cn, int max_iter=1)
 {
 	int l = prob->l;
 	int w_size = prob->n;
@@ -937,6 +937,8 @@ static int solve_l2r_l1l2_svc(const problem *prob, const parameter *param, doubl
 		upper_bound[0] = Cn;
 		upper_bound[2] = Cp;
 	}
+
+	printf("%s\n", __func__);
 
 	for(i=0; i<l; i++)
 	{
@@ -1112,7 +1114,7 @@ static int solve_l2r_l1l2_svc(const problem *prob, const parameter *param, doubl
 #define GETI(i) (0)
 // To support weights for instances, use GETI(i) (i)
 
-static int solve_l2r_l1l2_svr(const problem *prob, const parameter *param, double *w, int max_iter=300)
+static int solve_l2r_l1l2_svr(const problem *prob, const parameter *param, double *w, int max_iter=1)
 {
 	const int solver_type = param->solver_type;
 	int l = prob->l;
@@ -2609,7 +2611,7 @@ static void group_classes(const problem *prob, int *nr_class_ret, int **label_re
 static void train_one(const problem *prob, const parameter *param, double *w, double Cp, double Cn)
 {
 	int solver_type = param->solver_type;
-	int dual_solver_max_iter = 300;
+	int dual_solver_max_iter = 60;
 	int iter;
 
 	bool is_regression = (solver_type==L2R_L2LOSS_SVR ||
@@ -3159,6 +3161,8 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 	{
 		model_->w = Malloc(double, w_size);
 
+		printf("1\n");
+
 		if(param->init_sol != NULL)
 			for(i=0;i<w_size;i++)
 				model_->w[i] = param->init_sol[i];
@@ -3190,6 +3194,9 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 				std::cerr << "data error" << std::endl;
 				break;
 			}
+			
+			if (is_stop == 1 )
+				break;
 
 			train_one(prob, param, model_->w, 0, 0);
 			
@@ -3206,6 +3213,7 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 	}
 	else if(check_oneclass_model(model_))
 	{
+		printf("2\n");
 		model_->w = Malloc(double, w_size);
 		model_->nr_class = 2;
 		model_->label = NULL;
@@ -3231,6 +3239,9 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 				std::cerr << "data error" << std::endl;
 				break;
 			}
+			
+			if (is_stop == 1 )
+				break;
 
 			solve_oneclass_svm(prob, param, model_->w, &(model_->rho));
 			
@@ -3253,6 +3264,7 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 		int *count = NULL;
 		int *perm = Malloc(int,l);
 
+		printf("3\n");
 		// group training data of the same class
 		group_classes(prob,&nr_class,&label,&start,&count,perm);
 
@@ -3321,6 +3333,9 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 					std::cerr << "data error" << std::endl;
 					break;
 				}
+			
+				if (is_stop == 1 )
+					break;
 
 				Solver.Solve(model_->w);
 				
@@ -3376,6 +3391,9 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 						std::cerr << "data error" << std::endl;
 						break;
 					}
+					
+					if (is_stop == 1 )
+						break;
 
 					train_one(&sub_prob, param, model_->w, weighted_C[0], weighted_C[1]);
 					
@@ -3435,6 +3453,9 @@ model* train_with_port(const problem *prob, const parameter *param, int port)
 							std::cerr << "data error" << std::endl;
 							break;
 						}
+							
+						if (is_stop == 1 )
+							break;
 
 						train_one(&sub_prob, param, w, weighted_C[i], param->C);
 						
